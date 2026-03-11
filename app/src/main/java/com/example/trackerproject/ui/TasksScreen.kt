@@ -3,10 +3,15 @@ package com.example.trackerproject.ui
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -17,6 +22,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import com.example.trackerproject.data.AppDataStore
 import com.example.trackerproject.data.Subtask
@@ -31,11 +38,20 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = "Tasks",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(16.dp)
-            )
+            Column(
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
+            ) {
+                Text(
+                    text = "◆ TASKS",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(6.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                    thickness = 1.dp
+                )
+            }
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 itemsIndexed(tasks) { taskIndex, task ->
                     TaskItem(
@@ -63,13 +79,19 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
                         },
                         onLongPress = { editingTask = task }
                     )
-                    HorizontalDivider()
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline,
+                        thickness = 0.5.dp
+                    )
                 }
             }
         }
 
         FloatingActionButton(
             onClick = { showAddDialog = true },
+            shape = CutCornerShape(12.dp),
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
@@ -125,28 +147,45 @@ private fun TaskItem(
     onSubtaskToggle: (Int) -> Unit,
     onLongPress: () -> Unit
 ) {
+    val accent = if (task.isCompleted)
+        MaterialTheme.colorScheme.outlineVariant
+    else
+        MaterialTheme.colorScheme.primary
+
     Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .combinedClickable(onClick = {}, onLongClick = onLongPress)
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .height(IntrinsicSize.Min)
+                .combinedClickable(onClick = {}, onLongClick = onLongPress),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(checked = task.isCompleted, onCheckedChange = { onTaskToggle() })
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .fillMaxHeight()
+                    .background(accent)
+            )
+            Spacer(Modifier.width(12.dp))
+            SquareCheckbox(checked = task.isCompleted, onCheckedChange = onTaskToggle, color = accent)
             Text(
                 text = task.name,
                 style = MaterialTheme.typography.bodyLarge,
+                color = if (task.isCompleted)
+                    MaterialTheme.colorScheme.outlineVariant
+                else
+                    MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = 8.dp)
+                    .padding(start = 12.dp, top = 14.dp, bottom = 14.dp)
             )
             if (task.subtasks.isNotEmpty()) {
                 IconButton(onClick = onExpandToggle) {
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp
                                       else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (isExpanded) "Collapse" else "Expand"
+                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -154,24 +193,56 @@ private fun TaskItem(
         AnimatedVisibility(visible = isExpanded) {
             Column {
                 task.subtasks.forEachIndexed { index, subtask ->
+                    val subAccent = if (subtask.isCompleted)
+                        MaterialTheme.colorScheme.outlineVariant
+                    else
+                        MaterialTheme.colorScheme.secondary
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 48.dp, end = 16.dp, top = 2.dp, bottom = 2.dp),
+                            .padding(start = 40.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Checkbox(
+                        SquareCheckbox(
                             checked = subtask.isCompleted,
-                            onCheckedChange = { onSubtaskToggle(index) }
+                            onCheckedChange = { onSubtaskToggle(index) },
+                            color = subAccent
                         )
                         Text(
                             text = subtask.name,
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(start = 8.dp)
+                            color = if (subtask.isCompleted)
+                                MaterialTheme.colorScheme.outlineVariant
+                            else
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(start = 10.dp)
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SquareCheckbox(checked: Boolean, onCheckedChange: () -> Unit, color: Color) {
+    Box(
+        modifier = Modifier
+            .size(20.dp)
+            .border(1.5.dp, if (checked) color else color.copy(alpha = 0.5f), RectangleShape)
+            .background(if (checked) color.copy(alpha = 0.2f) else Color.Transparent, RectangleShape)
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) { onCheckedChange() },
+        contentAlignment = Alignment.Center
+    ) {
+        if (checked) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .background(color, RectangleShape)
+            )
         }
     }
 }
@@ -190,13 +261,16 @@ private fun EditTaskDialog(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete task?") },
+            title = { Text("DELETE TASK?") },
             text = { Text("\"${task.name}\" and all its subtasks will be removed.") },
             confirmButton = {
-                TextButton(onClick = onDelete) { Text("Delete") }
+                TextButton(
+                    onClick = onDelete,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("DELETE") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("CANCEL") }
             }
         )
         return
@@ -204,25 +278,34 @@ private fun EditTaskDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(task.name) },
+        title = { Text(task.name.uppercase()) },
         text = {
             Column {
                 if (subtasks.isNotEmpty()) {
-                    Text("Subtasks:", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        "SUBTASKS",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(6.dp))
                     subtasks.forEachIndexed { index, subtask ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "• ${subtask.name}",
+                                text = "▸ ${subtask.name}",
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(top = 2.dp)
                             )
                             IconButton(onClick = { subtasks.removeAt(index) }) {
-                                Icon(Icons.Default.Close, contentDescription = "Remove subtask")
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Remove subtask",
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                                )
                             }
                         }
                     }
@@ -232,8 +315,9 @@ private fun EditTaskDialog(
                     OutlinedTextField(
                         value = subtaskInput,
                         onValueChange = { subtaskInput = it },
-                        label = { Text("Add subtask") },
-                        modifier = Modifier.weight(1f)
+                        label = { Text("ADD SUBTASK") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
                     )
                     IconButton(onClick = {
                         if (subtaskInput.isNotBlank()) {
@@ -241,7 +325,11 @@ private fun EditTaskDialog(
                             subtaskInput = ""
                         }
                     }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add subtask")
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add subtask",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -251,15 +339,15 @@ private fun EditTaskDialog(
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = null)
                     Spacer(Modifier.width(4.dp))
-                    Text("Delete task")
+                    Text("DELETE TASK")
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(subtasks.toList()) }) { Text("Save") }
+            TextButton(onClick = { onSave(subtasks.toList()) }) { Text("SAVE") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text("CANCEL") }
         }
     )
 }
@@ -272,21 +360,27 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, List<String
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New Task") },
+        title = { Text("NEW TASK") },
         text = {
             Column {
                 OutlinedTextField(
                     value = taskName,
                     onValueChange = { taskName = it },
-                    label = { Text("Task name") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("TASK NAME") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
                 Spacer(Modifier.height(12.dp))
                 if (subtasks.isNotEmpty()) {
-                    Text("Subtasks:", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        "SUBTASKS",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(4.dp))
                     subtasks.forEach { st ->
                         Text(
-                            text = "  • $st",
+                            text = "  ▸ $st",
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 2.dp)
                         )
@@ -297,8 +391,9 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, List<String
                     OutlinedTextField(
                         value = subtaskInput,
                         onValueChange = { subtaskInput = it },
-                        label = { Text("Add subtask (optional)") },
-                        modifier = Modifier.weight(1f)
+                        label = { Text("ADD SUBTASK") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
                     )
                     IconButton(onClick = {
                         if (subtaskInput.isNotBlank()) {
@@ -306,7 +401,11 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, List<String
                             subtaskInput = ""
                         }
                     }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add subtask")
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add subtask",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
@@ -315,10 +414,10 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, List<String
             TextButton(
                 onClick = { if (taskName.isNotBlank()) onConfirm(taskName.trim(), subtasks.toList()) },
                 enabled = taskName.isNotBlank()
-            ) { Text("Add") }
+            ) { Text("ADD") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text("CANCEL") }
         }
     )
 }
