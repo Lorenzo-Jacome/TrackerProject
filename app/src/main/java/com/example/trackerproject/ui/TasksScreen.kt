@@ -3,6 +3,7 @@ package com.example.trackerproject.ui
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,10 +18,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import com.example.trackerproject.data.AppDataStore
 import com.example.trackerproject.data.Subtask
 import com.example.trackerproject.data.Task
+import com.example.trackerproject.ui.theme.HotPink
 
 @Composable
 fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
@@ -31,11 +35,18 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = "Tasks",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(16.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(HotPink)
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            ) {
+                Text(
+                    text = "TASKS",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.Black
+                )
+            }
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 itemsIndexed(tasks) { taskIndex, task ->
                     TaskItem(
@@ -63,13 +74,15 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
                         },
                         onLongPress = { editingTask = task }
                     )
-                    HorizontalDivider()
                 }
             }
         }
 
         FloatingActionButton(
             onClick = { showAddDialog = true },
+            shape = RectangleShape,
+            containerColor = HotPink,
+            contentColor = Color.Black,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
@@ -137,6 +150,7 @@ private fun TaskItem(
             Text(
                 text = task.name,
                 style = MaterialTheme.typography.bodyLarge,
+                color = Color.White,
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 8.dp)
@@ -146,7 +160,8 @@ private fun TaskItem(
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp
                                       else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (isExpanded) "Collapse" else "Expand"
+                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        tint = Color.White
                     )
                 }
             }
@@ -167,6 +182,7 @@ private fun TaskItem(
                         Text(
                             text = subtask.name,
                             style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White,
                             modifier = Modifier.padding(start = 8.dp)
                         )
                     }
@@ -193,7 +209,10 @@ private fun EditTaskDialog(
             title = { Text("Delete task?") },
             text = { Text("\"${task.name}\" and all its subtasks will be removed.") },
             confirmButton = {
-                TextButton(onClick = onDelete) { Text("Delete") }
+                TextButton(
+                    onClick = onDelete,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Delete") }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
@@ -233,7 +252,8 @@ private fun EditTaskDialog(
                         value = subtaskInput,
                         onValueChange = { subtaskInput = it },
                         label = { Text("Add subtask") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
                     )
                     IconButton(onClick = {
                         if (subtaskInput.isNotBlank()) {
@@ -279,7 +299,8 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, List<String
                     value = taskName,
                     onValueChange = { taskName = it },
                     label = { Text("Task name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
                 Spacer(Modifier.height(12.dp))
                 if (subtasks.isNotEmpty()) {
@@ -298,7 +319,8 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, List<String
                         value = subtaskInput,
                         onValueChange = { subtaskInput = it },
                         label = { Text("Add subtask (optional)") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
                     )
                     IconButton(onClick = {
                         if (subtaskInput.isNotBlank()) {

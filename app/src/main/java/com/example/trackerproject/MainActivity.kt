@@ -12,7 +12,9 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.example.trackerproject.ui.HabitsScreen
 import com.example.trackerproject.ui.TasksScreen
 import com.example.trackerproject.ui.theme.TrackerProjectTheme
@@ -37,18 +39,35 @@ fun MainScreen() {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.primary,
+                tonalElevation = 0.dp
+            ) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
                     icon = { Icon(Icons.Default.List, contentDescription = "Tasks") },
-                    label = { Text("Tasks") }
+                    label = { Text("Tasks") },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor   = Color.Black,
+                        selectedTextColor   = Color.Black,
+                        indicatorColor      = Color.Transparent,
+                        unselectedIconColor = Color.Black.copy(alpha = 0.5f),
+                        unselectedTextColor = Color.Black.copy(alpha = 0.5f),
+                    )
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     icon = { Icon(Icons.Default.DateRange, contentDescription = "Habits") },
-                    label = { Text("Habits") }
+                    label = { Text("Habits") },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor   = Color.Black,
+                        selectedTextColor   = Color.Black,
+                        indicatorColor      = Color.Transparent,
+                        unselectedIconColor = Color.Black.copy(alpha = 0.5f),
+                        unselectedTextColor = Color.Black.copy(alpha = 0.5f),
+                    )
                 )
             }
         }
