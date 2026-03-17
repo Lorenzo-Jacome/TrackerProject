@@ -6,7 +6,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import com.example.trackerproject.data.AppDataStore
 import com.example.trackerproject.data.Subtask
 import com.example.trackerproject.data.Task
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
@@ -28,6 +30,9 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
     var showAddDialog by remember { mutableStateOf(false) }
     var editingTask by remember { mutableStateOf<Task?>(null) }
     var expandedIds by remember { mutableStateOf(setOf<String>()) }
+
+    val mainTasks = tasks.filter { !it.isCompleted && it.priority == "Main" }
+    val sideTasks = tasks.filter { !it.isCompleted && it.priority == "Side" }
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -37,33 +42,83 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
                 modifier = Modifier.padding(16.dp)
             )
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                itemsIndexed(tasks) { taskIndex, task ->
-                    TaskItem(
-                        task = task,
-                        isExpanded = task.id in expandedIds,
-                        onExpandToggle = {
-                            expandedIds = if (task.id in expandedIds)
-                                expandedIds - task.id else expandedIds + task.id
-                        },
-                        onTaskToggle = {
-                            val updated = tasks.toMutableList()
-                            updated[taskIndex] = task.copy(isCompleted = !task.isCompleted)
-                            tasks = updated
-                            AppDataStore.saveTasks(context, tasks)
-                        },
-                        onSubtaskToggle = { subtaskIndex ->
-                            val updatedSubtasks = task.subtasks.toMutableList()
-                            updatedSubtasks[subtaskIndex] =
-                                updatedSubtasks[subtaskIndex].copy(isCompleted = !updatedSubtasks[subtaskIndex].isCompleted)
-                            val allDone = updatedSubtasks.all { it.isCompleted }
-                            val updated = tasks.toMutableList()
-                            updated[taskIndex] = task.copy(subtasks = updatedSubtasks, isCompleted = allDone)
-                            tasks = updated
-                            AppDataStore.saveTasks(context, tasks)
-                        },
-                        onLongPress = { editingTask = task }
-                    )
-                    HorizontalDivider()
+                if (mainTasks.isNotEmpty()) {
+                    item { SectionHeader("MAIN") }
+                    items(mainTasks, key = { it.id }) { task ->
+                        TaskItem(
+                            task = task,
+                            isExpanded = task.id in expandedIds,
+                            onExpandToggle = {
+                                expandedIds = if (task.id in expandedIds)
+                                    expandedIds - task.id else expandedIds + task.id
+                            },
+                            onTaskToggle = {
+                                tasks = tasks.map { t ->
+                                    if (t.id == task.id) t.copy(isCompleted = true) else t
+                                }.toMutableList()
+                                AppDataStore.saveTasks(context, tasks)
+                            },
+                            onSubtaskToggle = { subtaskIndex ->
+                                val updatedSubtasks = task.subtasks.toMutableList()
+                                updatedSubtasks[subtaskIndex] =
+                                    updatedSubtasks[subtaskIndex].copy(isCompleted = !updatedSubtasks[subtaskIndex].isCompleted)
+                                val allDone = updatedSubtasks.all { it.isCompleted }
+                                tasks = tasks.map { t ->
+                                    if (t.id == task.id) t.copy(subtasks = updatedSubtasks, isCompleted = allDone) else t
+                                }.toMutableList()
+                                AppDataStore.saveTasks(context, tasks)
+                            },
+                            onLongPress = { editingTask = task }
+                        )
+                        HorizontalDivider()
+                    }
+                }
+
+                if (sideTasks.isNotEmpty()) {
+                    item { SectionHeader("SIDE") }
+                    items(sideTasks, key = { it.id }) { task ->
+                        TaskItem(
+                            task = task,
+                            isExpanded = task.id in expandedIds,
+                            onExpandToggle = {
+                                expandedIds = if (task.id in expandedIds)
+                                    expandedIds - task.id else expandedIds + task.id
+                            },
+                            onTaskToggle = {
+                                tasks = tasks.map { t ->
+                                    if (t.id == task.id) t.copy(isCompleted = true) else t
+                                }.toMutableList()
+                                AppDataStore.saveTasks(context, tasks)
+                            },
+                            onSubtaskToggle = { subtaskIndex ->
+                                val updatedSubtasks = task.subtasks.toMutableList()
+                                updatedSubtasks[subtaskIndex] =
+                                    updatedSubtasks[subtaskIndex].copy(isCompleted = !updatedSubtasks[subtaskIndex].isCompleted)
+                                val allDone = updatedSubtasks.all { it.isCompleted }
+                                tasks = tasks.map { t ->
+                                    if (t.id == task.id) t.copy(subtasks = updatedSubtasks, isCompleted = allDone) else t
+                                }.toMutableList()
+                                AppDataStore.saveTasks(context, tasks)
+                            },
+                            onLongPress = { editingTask = task }
+                        )
+                        HorizontalDivider()
+                    }
+                }
+
+                if (mainTasks.isEmpty() && sideTasks.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No tasks yet. Tap + to add one.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -81,11 +136,13 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
     if (showAddDialog) {
         AddTaskDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, subtaskNames ->
+            onConfirm = { name, subtaskNames, dueDate, priority ->
                 val newTask = Task(
                     id = AppDataStore.newId(),
                     name = name,
-                    subtasks = subtaskNames.map { Subtask(it) }
+                    subtasks = subtaskNames.map { Subtask(it) },
+                    dueDate = dueDate,
+                    priority = priority
                 )
                 tasks = (tasks + newTask).toMutableList()
                 AppDataStore.saveTasks(context, tasks)
@@ -98,10 +155,15 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
         EditTaskDialog(
             task = task,
             onDismiss = { editingTask = null },
-            onSave = { updatedSubtasks ->
+            onSave = { updatedSubtasks, updatedDueDate, updatedPriority ->
                 val allDone = updatedSubtasks.isNotEmpty() && updatedSubtasks.all { it.isCompleted }
                 tasks = tasks.map {
-                    if (it.id == task.id) it.copy(subtasks = updatedSubtasks, isCompleted = allDone) else it
+                    if (it.id == task.id) it.copy(
+                        subtasks = updatedSubtasks,
+                        isCompleted = allDone,
+                        dueDate = updatedDueDate,
+                        priority = updatedPriority
+                    ) else it
                 }.toMutableList()
                 AppDataStore.saveTasks(context, tasks)
                 editingTask = null
@@ -113,6 +175,19 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
             }
         )
     }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
+    )
+    HorizontalDivider()
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -134,13 +209,20 @@ private fun TaskItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(checked = task.isCompleted, onCheckedChange = { onTaskToggle() })
-            Text(
-                text = task.name,
-                style = MaterialTheme.typography.bodyLarge,
+            Column(
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 8.dp)
-            )
+            ) {
+                Text(text = task.name, style = MaterialTheme.typography.bodyLarge)
+                if (task.dueDate != null) {
+                    Text(
+                        text = "Due: ${formatDate(task.dueDate)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            }
             if (task.subtasks.isNotEmpty()) {
                 IconButton(onClick = onExpandToggle) {
                     Icon(
@@ -176,16 +258,39 @@ private fun TaskItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditTaskDialog(
     task: Task,
     onDismiss: () -> Unit,
-    onSave: (List<Subtask>) -> Unit,
+    onSave: (List<Subtask>, String?, String) -> Unit,
     onDelete: () -> Unit
 ) {
     val subtasks = remember { mutableStateListOf<Subtask>().also { it.addAll(task.subtasks) } }
     var subtaskInput by remember { mutableStateOf("") }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var dueDate by remember { mutableStateOf(task.dueDate) }
+    var priority by remember { mutableStateOf(task.priority) }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = dueDate?.let { dateStringToMillis(it) }
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { dueDate = millisToDateString(it) }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) { DatePicker(state = datePickerState) }
+        return
+    }
 
     if (showDeleteConfirm) {
         AlertDialog(
@@ -207,6 +312,22 @@ private fun EditTaskDialog(
         title = { Text(task.name) },
         text = {
             Column {
+                Text("Priority", style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.height(6.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    listOf("Main", "Side").forEach { p ->
+                        OutlinedButton(
+                            onClick = { priority = p },
+                            colors = if (priority == p)
+                                ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                            else
+                                ButtonDefaults.outlinedButtonColors(),
+                            modifier = Modifier.weight(1f)
+                        ) { Text(p) }
+                        if (p == "Main") Spacer(Modifier.width(8.dp))
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
                 if (subtasks.isNotEmpty()) {
                     Text("Subtasks:", style = MaterialTheme.typography.labelMedium)
                     subtasks.forEachIndexed { index, subtask ->
@@ -217,9 +338,7 @@ private fun EditTaskDialog(
                             Text(
                                 text = "• ${subtask.name}",
                                 style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(top = 2.dp)
+                                modifier = Modifier.weight(1f).padding(top = 2.dp)
                             )
                             IconButton(onClick = { subtasks.removeAt(index) }) {
                                 Icon(Icons.Default.Close, contentDescription = "Remove subtask")
@@ -233,18 +352,33 @@ private fun EditTaskDialog(
                         value = subtaskInput,
                         onValueChange = { subtaskInput = it },
                         label = { Text("Add subtask") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
                     )
                     IconButton(onClick = {
                         if (subtaskInput.isNotBlank()) {
                             subtasks.add(Subtask(subtaskInput.trim()))
                             subtaskInput = ""
                         }
-                    }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add subtask")
-                    }
+                    }) { Icon(Icons.Default.Add, contentDescription = "Add subtask") }
                 }
                 Spacer(Modifier.height(12.dp))
+                if (dueDate != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Due: ${formatDate(dueDate!!)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { showDatePicker = true }) { Text("Change") }
+                        IconButton(onClick = { dueDate = null }) {
+                            Icon(Icons.Default.Close, contentDescription = "Remove date")
+                        }
+                    }
+                } else {
+                    TextButton(onClick = { showDatePicker = true }) { Text("Set due date") }
+                }
+                Spacer(Modifier.height(4.dp))
                 TextButton(
                     onClick = { showDeleteConfirm = true },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
@@ -256,7 +390,7 @@ private fun EditTaskDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(subtasks.toList()) }) { Text("Save") }
+            TextButton(onClick = { onSave(subtasks.toList(), dueDate, priority) }) { Text("Save") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
@@ -264,11 +398,35 @@ private fun EditTaskDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, List<String>) -> Unit) {
+private fun AddTaskDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, List<String>, String?, String) -> Unit
+) {
     var taskName by remember { mutableStateOf("") }
     var subtaskInput by remember { mutableStateOf("") }
     val subtasks = remember { mutableStateListOf<String>() }
+    var dueDate by remember { mutableStateOf<String?>(null) }
+    var priority by remember { mutableStateOf("Main") }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState()
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { dueDate = millisToDateString(it) }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) { DatePicker(state = datePickerState) }
+        return
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -279,8 +437,25 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, List<String
                     value = taskName,
                     onValueChange = { taskName = it },
                     label = { Text("Task name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
+                Spacer(Modifier.height(12.dp))
+                Text("Priority", style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.height(6.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    listOf("Main", "Side").forEach { p ->
+                        OutlinedButton(
+                            onClick = { priority = p },
+                            colors = if (priority == p)
+                                ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                            else
+                                ButtonDefaults.outlinedButtonColors(),
+                            modifier = Modifier.weight(1f)
+                        ) { Text(p) }
+                        if (p == "Main") Spacer(Modifier.width(8.dp))
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
                 if (subtasks.isNotEmpty()) {
                     Text("Subtasks:", style = MaterialTheme.typography.labelMedium)
@@ -298,22 +473,37 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, List<String
                         value = subtaskInput,
                         onValueChange = { subtaskInput = it },
                         label = { Text("Add subtask (optional)") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
                     )
                     IconButton(onClick = {
                         if (subtaskInput.isNotBlank()) {
                             subtasks.add(subtaskInput.trim())
                             subtaskInput = ""
                         }
-                    }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add subtask")
+                    }) { Icon(Icons.Default.Add, contentDescription = "Add subtask") }
+                }
+                Spacer(Modifier.height(12.dp))
+                if (dueDate != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Due: ${formatDate(dueDate!!)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { showDatePicker = true }) { Text("Change") }
+                        IconButton(onClick = { dueDate = null }) {
+                            Icon(Icons.Default.Close, contentDescription = "Remove date")
+                        }
                     }
+                } else {
+                    TextButton(onClick = { showDatePicker = true }) { Text("Set due date") }
                 }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { if (taskName.isNotBlank()) onConfirm(taskName.trim(), subtasks.toList()) },
+                onClick = { if (taskName.isNotBlank()) onConfirm(taskName.trim(), subtasks.toList(), dueDate, priority) },
                 enabled = taskName.isNotBlank()
             ) { Text("Add") }
         },
@@ -321,4 +511,24 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, List<String
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+}
+
+private fun formatDate(dateStr: String): String {
+    return try {
+        val input = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val output = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+        output.format(input.parse(dateStr)!!)
+    } catch (e: Exception) { dateStr }
+}
+
+private fun millisToDateString(millis: Long): String {
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    sdf.timeZone = TimeZone.getTimeZone("UTC")
+    return sdf.format(Date(millis))
+}
+
+private fun dateStringToMillis(dateStr: String): Long {
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    sdf.timeZone = TimeZone.getTimeZone("UTC")
+    return sdf.parse(dateStr)?.time ?: System.currentTimeMillis()
 }

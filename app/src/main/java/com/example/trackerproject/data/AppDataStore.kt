@@ -39,7 +39,9 @@ object AppDataStore {
                 val st = stArr.getJSONObject(j)
                 Subtask(st.getString("name"), st.getBoolean("isCompleted"))
             }
-            Task(obj.getString("id"), obj.getString("name"), subtasks, obj.getBoolean("isCompleted"))
+            val dueDate = if (obj.has("dueDate") && !obj.isNull("dueDate")) obj.getString("dueDate") else null
+            val priority = obj.optString("priority", "Main")
+            Task(obj.getString("id"), obj.getString("name"), subtasks, obj.getBoolean("isCompleted"), dueDate, priority)
         }.toMutableList()
     }
 
@@ -58,6 +60,8 @@ object AppDataStore {
                 stArr.put(stObj)
             }
             obj.put("subtasks", stArr)
+            if (task.dueDate != null) obj.put("dueDate", task.dueDate)
+            obj.put("priority", task.priority)
             arr.put(obj)
         }
         return arr.toString()

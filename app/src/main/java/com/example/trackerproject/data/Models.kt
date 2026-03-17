@@ -9,7 +9,9 @@ data class Task(
     val id: String,
     val name: String,
     val subtasks: List<Subtask> = emptyList(),
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val dueDate: String? = null,
+    val priority: String = "Main"
 )
 
 data class Habit(

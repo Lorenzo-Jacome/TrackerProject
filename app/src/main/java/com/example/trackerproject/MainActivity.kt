@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
@@ -14,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.example.trackerproject.ui.HabitsScreen
+import com.example.trackerproject.ui.StatusScreen
 import com.example.trackerproject.ui.TasksScreen
 import com.example.trackerproject.ui.theme.TrackerProjectTheme
 
@@ -47,6 +49,12 @@ fun MainScreen() {
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
+                    icon = { Icon(Icons.Default.CheckCircle, contentDescription = "Status") },
+                    label = { Text("Status") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
                     icon = { Icon(Icons.Default.DateRange, contentDescription = "Habits") },
                     label = { Text("Habits") }
                 )
@@ -55,7 +63,8 @@ fun MainScreen() {
     ) { innerPadding ->
         when (selectedTab) {
             0 -> TasksScreen(context = context, modifier = Modifier.padding(innerPadding))
-            1 -> HabitsScreen(context = context, modifier = Modifier.padding(innerPadding))
+            1 -> StatusScreen(context = context, modifier = Modifier.padding(innerPadding))
+            2 -> HabitsScreen(context = context, modifier = Modifier.padding(innerPadding))
         }
     }
 }
