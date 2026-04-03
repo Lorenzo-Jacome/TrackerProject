@@ -2,6 +2,7 @@ package com.example.trackerproject.ui
 
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -15,14 +16,59 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.sp
+import com.example.trackerproject.R
 import com.example.trackerproject.data.AppDataStore
 import com.example.trackerproject.data.Subtask
 import com.example.trackerproject.data.Task
 import java.text.SimpleDateFormat
 import java.util.*
+
+private val GeistPixelCircle = FontFamily(Font(R.font.geistpixel_circle))
+private val GeistPixelSquare = FontFamily(Font(R.font.geistpixel_square))
+private val GeistPixelLine = FontFamily(Font(R.font.geistpixel_line))
+
+@Composable
+private fun SquareCheckbox(checked: Boolean, onCheckedChange: () -> Unit) {
+    val neonLime = Color(0xFFAEFF00)
+    val size = 20.dp
+    Box(
+        modifier = Modifier
+            .size(size)
+            .then(
+                if (checked) Modifier.background(neonLime)
+                else Modifier.border(2.dp, Color.White)
+            )
+            .clickable { onCheckedChange() }
+    ) {
+        if (checked) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val w = this.size.width
+                val h = this.size.height
+                val padding = w * 0.22f
+                drawLine(
+                    color = Color.Black,
+                    start = Offset(padding, h - padding),
+                    end = Offset(w - padding, padding),
+                    strokeWidth = w * 0.12f,
+                    cap = StrokeCap.Square
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
@@ -36,12 +82,30 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = "Tasks",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(16.dp)
-            )
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFAEFF00))
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            ) {
+                Text(
+                    text = "TASKS",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontFamily = GeistPixelCircle,
+                        fontSize = 48.sp,
+                        color = Color.Black,
+                        shadow = Shadow(
+                            color = Color(0x88000000),
+                            offset = Offset(6f, 6f),
+                            blurRadius = 0f
+                        )
+                    )
+                )
+            }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
                 if (mainTasks.isNotEmpty()) {
                     item { SectionHeader("MAIN") }
                     items(mainTasks, key = { it.id }) { task ->
@@ -70,7 +134,6 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
                             },
                             onLongPress = { editingTask = task }
                         )
-                        HorizontalDivider()
                     }
                 }
 
@@ -102,7 +165,6 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
                             },
                             onLongPress = { editingTask = task }
                         )
-                        HorizontalDivider()
                     }
                 }
 
@@ -125,11 +187,13 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
 
         FloatingActionButton(
             onClick = { showAddDialog = true },
+            shape = androidx.compose.ui.graphics.RectangleShape,
+            containerColor = Color(0xFF1F00FF),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Task")
+            Icon(Icons.Default.Add, contentDescription = "Add Task", tint = Color.White)
         }
     }
 
@@ -181,13 +245,14 @@ fun TasksScreen(context: Context, modifier: Modifier = Modifier) {
 private fun SectionHeader(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
+        fontFamily = GeistPixelSquare,
+        fontSize = 22.sp,
+        color = Color.White,
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .background(Color(0xFF1F00FF))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     )
-    HorizontalDivider()
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -200,26 +265,44 @@ private fun TaskItem(
     onSubtaskToggle: (Int) -> Unit,
     onLongPress: () -> Unit
 ) {
-    Column {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(onClick = {}, onLongClick = onLongPress)
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(checked = task.isCompleted, onCheckedChange = { onTaskToggle() })
-            Column(
+            SquareCheckbox(checked = task.isCompleted, onCheckedChange = { onTaskToggle() })
+            Text(
+                text = task.name,
+                style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 8.dp)
+            )
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(1.dp),
+                modifier = Modifier.padding(end = 4.dp)
             ) {
-                Text(text = task.name, style = MaterialTheme.typography.bodyLarge)
+                val started = task.subtasks.any { it.isCompleted }
+                Text(
+                    text = if (started) "STARTED" else "NOT_STARTED",
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontSize = 9.sp,
+                    lineHeight = 9.sp,
+                    color = if (started) Color(0xFFAEFF00) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
                 if (task.dueDate != null) {
+                    val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                    val overdue = task.dueDate <= today
                     Text(
-                        text = "Due: ${formatDate(task.dueDate)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        text = "DUE: ${task.dueDate.replace('-', '/')}",
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        fontSize = 9.sp,
+                        lineHeight = 9.sp,
+                        color = if (overdue) Color(0xFFD6071D) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
             }
@@ -231,6 +314,8 @@ private fun TaskItem(
                         contentDescription = if (isExpanded) "Collapse" else "Expand"
                     )
                 }
+            } else {
+                Spacer(modifier = Modifier.width(48.dp))
             }
         }
         AnimatedVisibility(visible = isExpanded) {
@@ -242,7 +327,7 @@ private fun TaskItem(
                             .padding(start = 48.dp, end = 16.dp, top = 2.dp, bottom = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Checkbox(
+                        SquareCheckbox(
                             checked = subtask.isCompleted,
                             onCheckedChange = { onSubtaskToggle(index) }
                         )
@@ -428,9 +513,24 @@ private fun AddTaskDialog(
         return
     }
 
+    val dialogBlue = Color(0xFF1F00FF)
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = Color.White,
+        unfocusedTextColor = Color.White,
+        focusedLabelColor = Color.White,
+        unfocusedLabelColor = Color.White.copy(alpha = 0.7f),
+        focusedBorderColor = Color.White,
+        unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
+        cursorColor = Color.White
+    )
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New Task") },
+        shape = androidx.compose.ui.graphics.RectangleShape,
+        containerColor = dialogBlue,
+        titleContentColor = Color.White,
+        textContentColor = Color.White,
+        title = { Text("NEW TASK", fontFamily = GeistPixelLine) },
         text = {
             Column {
                 OutlinedTextField(
@@ -438,19 +538,22 @@ private fun AddTaskDialog(
                     onValueChange = { taskName = it },
                     label = { Text("Task name") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    colors = fieldColors
                 )
                 Spacer(Modifier.height(12.dp))
-                Text("Priority", style = MaterialTheme.typography.labelMedium)
+                Text("Priority", style = MaterialTheme.typography.labelMedium, color = Color.White)
                 Spacer(Modifier.height(6.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
                     listOf("Main", "Side").forEach { p ->
                         OutlinedButton(
                             onClick = { priority = p },
-                            colors = if (priority == p)
-                                ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                            else
-                                ButtonDefaults.outlinedButtonColors(),
+                            shape = androidx.compose.ui.graphics.RectangleShape,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = if (priority == p) Color.White.copy(alpha = 0.2f) else Color.Transparent,
+                                contentColor = Color.White
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White),
                             modifier = Modifier.weight(1f)
                         ) { Text(p) }
                         if (p == "Main") Spacer(Modifier.width(8.dp))
@@ -458,11 +561,12 @@ private fun AddTaskDialog(
                 }
                 Spacer(Modifier.height(12.dp))
                 if (subtasks.isNotEmpty()) {
-                    Text("Subtasks:", style = MaterialTheme.typography.labelMedium)
+                    Text("Subtasks:", style = MaterialTheme.typography.labelMedium, color = Color.White)
                     subtasks.forEach { st ->
                         Text(
                             text = "  • $st",
                             style = MaterialTheme.typography.bodySmall,
+                            color = Color.White,
                             modifier = Modifier.padding(top = 2.dp)
                         )
                     }
@@ -474,14 +578,15 @@ private fun AddTaskDialog(
                         onValueChange = { subtaskInput = it },
                         label = { Text("Add subtask (optional)") },
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        colors = fieldColors
                     )
                     IconButton(onClick = {
                         if (subtaskInput.isNotBlank()) {
                             subtasks.add(subtaskInput.trim())
                             subtaskInput = ""
                         }
-                    }) { Icon(Icons.Default.Add, contentDescription = "Add subtask") }
+                    }) { Icon(Icons.Default.Add, contentDescription = "Add subtask", tint = Color.White) }
                 }
                 Spacer(Modifier.height(12.dp))
                 if (dueDate != null) {
@@ -489,15 +594,16 @@ private fun AddTaskDialog(
                         Text(
                             text = "Due: ${formatDate(dueDate!!)}",
                             style = MaterialTheme.typography.bodySmall,
+                            color = Color.White,
                             modifier = Modifier.weight(1f)
                         )
-                        TextButton(onClick = { showDatePicker = true }) { Text("Change") }
+                        TextButton(onClick = { showDatePicker = true }) { Text("Change", color = Color.White) }
                         IconButton(onClick = { dueDate = null }) {
-                            Icon(Icons.Default.Close, contentDescription = "Remove date")
+                            Icon(Icons.Default.Close, contentDescription = "Remove date", tint = Color.White)
                         }
                     }
                 } else {
-                    TextButton(onClick = { showDatePicker = true }) { Text("Set due date") }
+                    TextButton(onClick = { showDatePicker = true }) { Text("Set due date", color = Color.White) }
                 }
             }
         },
@@ -505,10 +611,10 @@ private fun AddTaskDialog(
             TextButton(
                 onClick = { if (taskName.isNotBlank()) onConfirm(taskName.trim(), subtasks.toList(), dueDate, priority) },
                 enabled = taskName.isNotBlank()
-            ) { Text("Add") }
+            ) { Text("Add", color = Color.White) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text("Cancel", color = Color.White) }
         }
     )
 }
