@@ -175,8 +175,8 @@ fun HabitsScreen(context: Context, modifier: Modifier = Modifier) {
         EditHabitDialog(
             habit = habit,
             onDismiss = { editingHabit = null },
-            onSave = { name, timesPerWeek, color ->
-                habits = habits.map { if (it.id == habit.id) it.copy(name = name, timesPerWeek = timesPerWeek, color = color) else it }.toMutableList()
+            onSave = { name, timesPerWeek, color, dates ->
+                habits = habits.map { if (it.id == habit.id) it.copy(name = name, timesPerWeek = timesPerWeek, color = color, completedDates = dates) else it }.toMutableList()
                 AppDataStore.saveHabits(context, habits)
                 editingHabit = null
             },
@@ -448,13 +448,14 @@ private fun AddHabitDialog(onDismiss: () -> Unit, onConfirm: (String, Int, Int) 
 private fun EditHabitDialog(
     habit: Habit,
     onDismiss: () -> Unit,
-    onSave: (String, Int, Int) -> Unit,
+    onSave: (String, Int, Int, List<String>) -> Unit,
     onDelete: () -> Unit
 ) {
     var habitName by remember { mutableStateOf(habit.name) }
     var timesPerWeek by remember { mutableStateOf(habit.timesPerWeek) }
     var selectedColor by remember { mutableStateOf(habit.color) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var completedDates by remember { mutableStateOf(habit.completedDates.toList()) }
 
     if (showDeleteConfirm) {
         AlertDialog(
@@ -524,6 +525,43 @@ private fun EditHabitDialog(
                         }
                     }
                 }
+                Spacer(Modifier.height(16.dp))
+                Text("MISSED DAYS", style = MaterialTheme.typography.labelMedium, fontFamily = GeistPixelLine)
+                Spacer(Modifier.height(8.dp))
+                val missedSdf = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+                val dayFmt = remember { SimpleDateFormat("EEE", Locale.getDefault()) }
+                val numFmt = remember { SimpleDateFormat("d", Locale.getDefault()) }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    (1..14).forEach { daysAgo ->
+                        val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -daysAgo) }
+                        val dateStr = missedSdf.format(cal.time)
+                        val dayLabel = dayFmt.format(cal.time).uppercase().take(3)
+                        val numLabel = numFmt.format(cal.time)
+                        val isLogged = dateStr in completedDates
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .then(
+                                    if (isLogged) Modifier.background(Color(selectedColor))
+                                    else Modifier.border(1.dp, Color.White)
+                                )
+                                .clickable {
+                                    completedDates = if (isLogged) completedDates - dateStr else completedDates + dateStr
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(dayLabel, fontSize = 8.sp, lineHeight = 9.sp, color = if (isLogged) Color.Black else Color.White)
+                                Text(numLabel, fontSize = 12.sp, lineHeight = 13.sp, fontWeight = FontWeight.Bold, color = if (isLogged) Color.Black else Color.White)
+                            }
+                        }
+                    }
+                }
                 Spacer(Modifier.height(4.dp))
                 TextButton(onClick = { showDeleteConfirm = true }) {
                     Icon(Icons.Default.Delete, contentDescription = null)
@@ -534,7 +572,7 @@ private fun EditHabitDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { if (habitName.isNotBlank()) onSave(habitName.trim(), timesPerWeek, selectedColor) },
+                onClick = { if (habitName.isNotBlank()) onSave(habitName.trim(), timesPerWeek, selectedColor, completedDates) },
                 enabled = habitName.isNotBlank()
             ) { Text("Save") }
         },
